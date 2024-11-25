@@ -1,0 +1,9 @@
+{
+  "domain": "simple_keyboard",
+  "name": "Simple Keyboard Plugin",
+  "version": "1.0",
+  "documentation": "https://example.com",
+  "dependencies": [],
+  "codeowners": ["@crwulff"]
+}
+
