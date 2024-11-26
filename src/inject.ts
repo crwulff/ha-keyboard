@@ -2,39 +2,14 @@ import { customElement } from 'lit/decorators.js';
 import Keyboard from 'simple-keyboard';
 import styles from './simple-keyboard/build/css/index.css';
 
-function findEnclosingDialog(element: Element): Element | ShadowRoot | null {
-  let current : Element | null = element;
-//  return document.body;
-
-  while (current) {
-    const shadowRoot = current.shadowRoot;
-
-    //if (current.localName == 'ha-textfield') {
-    //    return shadowRoot;
-    //}
-    if (current.localName == 'ha-dialog') {
-        return (shadowRoot) ? shadowRoot.firstElementChild : null;
-    }
-    if ("ha-drawer" == current.localName && current.shadowRoot) {
-        return (shadowRoot) ? shadowRoot.querySelectorAll(".mdc-drawer-app-content")[0] : null;
-    }
-
-    // Move to the parent node or shadow root host
-    if (current.parentElement) {
-        current = current.parentElement;
-     } else {
-        const parentShadowRoot = current.parentNode as ShadowRoot;
-        current = (parentShadowRoot) ? parentShadowRoot.host : null;
-     }
-  }
-
-  return null; // No enclosing dialog found
-}
+// Global keyboard instance
+let globalKeyboard: VirtualKeyboard;
 
 @customElement('virtual-keyboard')
 class VirtualKeyboard extends HTMLElement {
     private _input: HTMLInputElement | HTMLTextAreaElement | null;
     private _keyboardContainer: HTMLElement | null;
+    private _hiding: boolean = false; // Set to true when hiding the keyboard
     keyboard: Keyboard | null;
 
     constructor() {
@@ -46,6 +21,7 @@ class VirtualKeyboard extends HTMLElement {
         `;
         this._input = null;
         this._keyboardContainer = null;
+        this._hiding = false;
     }
 
     connectedCallback() {
@@ -86,46 +62,104 @@ class VirtualKeyboard extends HTMLElement {
             e.stopPropagation();
             e.preventDefault();
         });
+
+        // ha-dialog will try to make evertyhing else inert when it is open
+        // but we want the keyboard to be active
+
+        // Observe changes to the inert attribute on this element
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                if (mutation.type === 'attributes' && mutation.attributeName === 'inert') {
+                    const target = mutation.target as HTMLElement;
+                    if (target.hasAttribute('inert')) {
+                        target.removeAttribute('inert');
+                        console.log('Removed inert attribute from', target);
+                    }
+                }
+            });
+        });
+
+        // Start observing this element for attribute changes
+        observer.observe(this, {
+            attributes: true,
+            subtree: true,
+            attributeFilter: ['inert']
+        });
     }
+
+    private focusListener = (event: Event) => {
+        console.log("Focus event", event);
+        this._input = event.target as HTMLInputElement | HTMLTextAreaElement;
+        this._hiding = false;
+
+        if (this.keyboard) {
+            this.keyboard.setInput(this._input.value);
+        }
+        this._keyboardContainer.style.display = "block";
+    };
+
+    private blurListener = (event: Event) => {
+        console.log("Blur event", event);
+        if (event.target == this._input) {
+            this._hiding = true;
+            setTimeout(() => {
+                if (this._hiding) {
+                this._keyboardContainer.style.display = "none";
+                }
+            }, 300); // Hide keyboard after blur with delay
+        }
+    };
+
+    private inputListener = (event: Event) =>{
+        if (event.target == this._input) {
+            console.log('Input value changed:', this._input.value);
+            if (this.keyboard) {
+                this.keyboard.setInput(this._input.value);
+            }
+        }
+    };
 
     get input() {
         return this._input;
     }
 
     set input(input: HTMLInputElement | HTMLTextAreaElement | null) {
+        console.log("Setting input", input, " previous input", this._input);
         this._input = input;
 
-        if (!this.keyboard || !input) {
+        if (!this.keyboard) {
+            return;
+        }
+        if (!input) {
+            this._hiding = true;
+            setTimeout(() => {
+                if (this._hiding) {
+                    this._keyboardContainer.style.display = "none";
+                }
+            }, 300); // Hide keyboard after removal with delay
             return;
         }
 
-        input.addEventListener("focus", () => {
-            if (this.keyboard) {
-                this.keyboard.setInput(input.value);
-            }
-            this._keyboardContainer.style.display = "block";
-        });
+        input.addEventListener("focus", this.focusListener);
+        input.addEventListener("blur", this.blurListener);
+        input.addEventListener("input", this.inputListener);
+    }
 
-        input.addEventListener("blur", () => {
-            setTimeout(() => {
-                this._keyboardContainer.style.display = "none";
-            }, 300); // Hide keyboard after blur with delay
-        });
-
-        input.addEventListener('input', () => {
-            console.log('Input value changed:', input.value);
-            if (this.keyboard) {
-                this.keyboard.setInput(input.value);
-            }
-        });
+    removeInput(input: HTMLInputElement | HTMLTextAreaElement) {
+        input.removeEventListener("focus", this.focusListener);
+        input.removeEventListener("blur", this.blurListener);
+        input.removeEventListener("input", this.inputListener);
+        if (this._input === input) {
+            this.input = null;
+        }
     }
 
     onChange(i : string) {
-        if (!this.input) {
+        if (!this._input) {
             return;
         }
 
-        this.input.value = i;
+        this._input.value = i;
 
         const inputEvent = new InputEvent('input', {
             inputType: 'insertText',
@@ -135,10 +169,10 @@ class VirtualKeyboard extends HTMLElement {
             data: i,
         });
 
-        this.input.dispatchEvent(inputEvent);
+        this._input.dispatchEvent(inputEvent);
 
         const changeEvent = new Event('change', { bubbles: true });
-        this.input.dispatchEvent(changeEvent);
+        this._input.dispatchEvent(changeEvent);
     }
 
     onKeyPress(button : string) {
@@ -167,24 +201,46 @@ class VirtualKeyboard extends HTMLElement {
     }
 }
 
-const setupKeyboard = (node : Element) => {
-    //console.log("setupKeyboard");
+function setupKeyboard(node : Element) {
     const inputs = node.querySelectorAll("textarea, input[type='text']"); // TODO: Bring up number pad keyboard for type='number'
     inputs.forEach(input => {
         if (input.classList.contains("keyboard-enabled")) return;
 
         input.classList.add("keyboard-enabled");
 
-        const keyboard = document.createElement('virtual-keyboard') as VirtualKeyboard;
+        globalKeyboard.input = input as HTMLInputElement | HTMLTextAreaElement;
+    });
+};
 
-        const dialog = findEnclosingDialog(input);
-        if (dialog) {
-          dialog.appendChild(keyboard);
-        } else {
-          document.body.appendChild(keyboard);
+function traverseShadowRoots(root: Element) {
+    if (root.shadowRoot) {
+        const inputs = root.shadowRoot.querySelectorAll("textarea, input[type='text']");
+        inputs.forEach(input => {
+            if (input.classList.contains("keyboard-enabled")) {
+                globalKeyboard.removeInput(input as HTMLInputElement | HTMLTextAreaElement);
+            }
+        });
+
+        root.shadowRoot.querySelectorAll('*').forEach((descendant) => {
+            if (descendant.shadowRoot) {
+                traverseShadowRoots(descendant);
+            }
+        });
+    }
+};
+
+function removeKeyboard(node: Element) {
+    const inputs = node.querySelectorAll("textarea, input[type='text']");
+    inputs.forEach(input => {
+        if (input.classList.contains("keyboard-enabled")) {
+            globalKeyboard.removeInput(input as HTMLInputElement | HTMLTextAreaElement);
         }
+    });
 
-        keyboard.input = input as HTMLInputElement | HTMLTextAreaElement;
+    node.querySelectorAll('*').forEach((descendant) => {
+        if (descendant.shadowRoot) {
+            traverseShadowRoots(descendant);
+        }
     });
 };
 
@@ -209,6 +265,12 @@ function observeShadowRoot(root : Element) {
                         });
                     }
                 });
+                mutation.removedNodes.forEach((node) => {
+                    if (node.nodeType === Node.ELEMENT_NODE) {
+                        const element = node as Element;
+                        removeKeyboard(element);
+                    }
+                });
             });
         });
 
@@ -220,7 +282,11 @@ function observeShadowRoot(root : Element) {
 }
 
 const docObserver = () => {
-    // Example: Observing a Lovelace card
+    // Create a virtual keyboard in the document body
+    globalKeyboard = document.createElement('virtual-keyboard') as VirtualKeyboard;
+    document.body.appendChild(globalKeyboard);
+
+    // Find mutations under home-assistant
     const main = document.querySelectorAll('home-assistant');
     main.forEach(observeShadowRoot);
 };
@@ -230,7 +296,6 @@ if (document.readyState === 'complete') {
 } else {
     window.addEventListener("load", () => {
         docObserver();
-        new MutationObserver(docObserver).observe(document.body, { childList: true, subtree: true });
     });
 }
 
