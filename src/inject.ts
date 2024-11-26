@@ -27,18 +27,33 @@ class VirtualKeyboard extends HTMLElement {
     connectedCallback() {
         this._keyboardContainer = this.shadowRoot.querySelector(".simple-keyboard") as HTMLElement;
 
-        this._keyboardContainer.style.position = 'absolute';
+        this._keyboardContainer.style.position = 'fixed';
         this._keyboardContainer.style.zIndex = "1000";
-
-        // TODO: Pick top or bottom based on where the input field is
-        this._keyboardContainer.style.bottom = "0";
-        this._keyboardContainer.style.left = "0";
 
         // Start initially hidden. A focus event will show the keyboard.
         this._keyboardContainer.style.display = "none";
 
         const style = document.createElement('style');
-        style.textContent = styles;
+        style.textContent = `
+            ${styles}
+            .simple-keyboard {
+                top: auto;
+                bottom: 0;
+                transition: transform 300ms ease-in-out;
+                transform: translateY(100%);
+            }
+            .simple-keyboard.visible {
+                transform: translateY(0);
+            }
+            .simple-keyboard.top {
+                top: 0;
+                bottom: auto;
+                transform: translateY(-100%);
+            }
+            .simple-keyboard.top.visible {
+                transform: translateY(0);
+            }
+        `;
         this._keyboardContainer.appendChild(style);
 
         this.keyboard = new Keyboard(this._keyboardContainer);
@@ -87,26 +102,50 @@ class VirtualKeyboard extends HTMLElement {
         });
     }
 
+    show() {
+        // Determine whether to show the keyboard above or below the input
+        const inputRect = this._input.getBoundingClientRect();
+        const windowHeight = window.innerHeight;
+
+        if (inputRect.top > windowHeight / 2) {
+            this._keyboardContainer.classList.add("top");
+        } else {
+            this._keyboardContainer.classList.remove("top");
+        }
+
+        // Make the keyboard visible
+        this._hiding = false;
+        this._keyboardContainer.style.display = "block";
+        requestAnimationFrame(() => {
+            this._keyboardContainer.classList.add("visible");
+        });
+    }   
+
+    hide() {
+        this._hiding = true;
+        this._keyboardContainer.classList.remove("visible");
+        setTimeout(() => {
+            if (this._hiding) {
+                this._keyboardContainer.style.display = "none";
+            }
+        }, 300); // Hide keyboard after removal with delay
+    }
+
     private focusListener = (event: Event) => {
         console.log("Focus event", event);
         this._input = event.target as HTMLInputElement | HTMLTextAreaElement;
-        this._hiding = false;
 
         if (this.keyboard) {
             this.keyboard.setInput(this._input.value);
         }
-        this._keyboardContainer.style.display = "block";
+
+        this.show();
     };
 
     private blurListener = (event: Event) => {
         console.log("Blur event", event);
         if (event.target == this._input) {
-            this._hiding = true;
-            setTimeout(() => {
-                if (this._hiding) {
-                this._keyboardContainer.style.display = "none";
-                }
-            }, 300); // Hide keyboard after blur with delay
+            this.hide();
         }
     };
 
@@ -131,12 +170,7 @@ class VirtualKeyboard extends HTMLElement {
             return;
         }
         if (!input) {
-            this._hiding = true;
-            setTimeout(() => {
-                if (this._hiding) {
-                    this._keyboardContainer.style.display = "none";
-                }
-            }, 300); // Hide keyboard after removal with delay
+            this.hide();
             return;
         }
 
