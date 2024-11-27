@@ -41,6 +41,8 @@ class VirtualKeyboard extends HTMLElement {
                 bottom: 0;
                 transition: transform 300ms ease-in-out;
                 transform: translateY(100%);
+                background: var(--primary-background-color);
+                color: var(--primary-text-color);
             }
             .simple-keyboard.visible {
                 transform: translateY(0);
@@ -53,6 +55,36 @@ class VirtualKeyboard extends HTMLElement {
             .simple-keyboard.top.visible {
                 transform: translateY(0);
             }
+            .simple-keyboard .hg-button {
+                background: var(--lcars-ui-quaternary);
+                color: var(--text-dark-color);
+            }
+            .hg-theme-default .hg-button.hg-standardBtn[data-skbtn="@"] {
+                max-width: 100%;
+            }
+            .simple-keyboard .hg-button.key-top {
+                background: var(--lcars-ui-tertiary);
+                color: var(--text-dark-color);
+            }
+            .simple-keyboard .hg-button.key-bottom {
+                background: var(--lcars-ui-secondary);
+                color: var(--text-dark-color);
+            }
+            .simple-keyboard .hg-button.key-hide,
+            .simple-keyboard .hg-button-at,
+            .simple-keyboard .hg-button-abc,
+            .simple-keyboard .hg-button-ABC {
+                max-width: 60px;
+            }
+            .simple-keyboard .hg-button.key-hide::before {
+                content: '';
+                display: block;
+                width: 24px;
+                height: 24px;
+                background: url('data:image/svg+xml;utf8,<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 5H20V15H4V5Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 9H8.01M12 9H12.01M16 9H16.01M8 13H8.01M12 13H12.01M16 13H16.01M12 17L12 21M12 21L15 18M12 21L9 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>') no-repeat center center;
+                background-size: contain;
+                color: var(--text-dark-color);
+            }
         `;
         this._keyboardContainer.appendChild(style);
 
@@ -63,6 +95,44 @@ class VirtualKeyboard extends HTMLElement {
             onKeyPress: (button : string) => this.onKeyPress(button),
             onKeyRelease: (button : string) => this.onKeyRelease(button),
             disableButtonHold: true,
+            layout: {
+                'default': [
+                    '` 1 2 3 4 5 6 7 8 9 0 - = {bksp}',
+                    'q w e r t y u i o p [ ] \\',
+                    'a s d f g h j k l ; \'',
+                    'z x c v b n m , . /',
+                    '{ABC} {at} {space} {hide}'
+                ],
+                'shift': [
+                    '~ ! @ # $ % ^ &amp; * ( ) _ + {bksp}',
+                    'Q W E R T Y U I O P { } |',
+                    'A S D F G H J K L : "',
+                    'Z X C V B N M &lt; &gt; ?',
+                    '{abc} {at} {space} {hide}'
+                ]
+            },
+            display: {
+                '{bksp}': '⌫',
+                '{space}': ' ',
+                '{hide}': ' ',
+                '{ABC}': 'ABC',
+                '{abc}': 'abc',
+                '{at}': '@'
+            },
+            buttonTheme: [
+                {
+                    class: "key-top",
+                    buttons: "` 1 2 3 4 5 6 7 8 9 0 - = ~ ! @ # $ % ^ &amp; * ( ) _ + {bksp}"
+                },
+                {
+                    class: "key-bottom",
+                    buttons: "{ABC} {abc} {at} {space} {hide}"
+                },
+                {
+                    class: "key-hide",
+                    buttons: "{hide}"
+                },
+            ],
             debug: true
         });
 
@@ -212,7 +282,7 @@ class VirtualKeyboard extends HTMLElement {
     onKeyPress(button : string) {
         console.log("Button pressed", button);
 
-        if (button === "{shift}" || button === "{lock}") {
+        if (button === "{ABC}" || button === "{abc}") {
             this.handleShift();
         }
     }
@@ -232,6 +302,8 @@ class VirtualKeyboard extends HTMLElement {
         this.keyboard.setOptions({
             layoutName: shiftToggle
         });
+
+        this.show();
     }
 }
 
