@@ -1,6 +1,7 @@
 import { customElement } from 'lit/decorators.js';
 import Keyboard from 'simple-keyboard';
 import styles from './simple-keyboard/build/css/index.css';
+import keyboardStyles from './keyboard.css';
 
 // Global keyboard instance
 let globalKeyboard: VirtualKeyboard;
@@ -16,7 +17,9 @@ class VirtualKeyboard extends HTMLElement {
         super();
         this.attachShadow({ mode: 'open' });
         this.shadowRoot.innerHTML = `
-            <div class="simple-keyboard">
+            <div class="simple-keyboard-outer">
+                <div class="simple-keyboard">
+                </div>
             </div>
         `;
         this._input = null;
@@ -25,7 +28,8 @@ class VirtualKeyboard extends HTMLElement {
     }
 
     connectedCallback() {
-        this._keyboardContainer = this.shadowRoot.querySelector(".simple-keyboard") as HTMLElement;
+        this._keyboardContainer = this.shadowRoot.querySelector(".simple-keyboard-outer") as HTMLElement;
+        const keyboardInternal = this.shadowRoot.querySelector(".simple-keyboard") as HTMLElement;
 
         this._keyboardContainer.style.position = 'fixed';
         this._keyboardContainer.style.zIndex = "1000";
@@ -36,64 +40,15 @@ class VirtualKeyboard extends HTMLElement {
         const style = document.createElement('style');
         style.textContent = `
             ${styles}
-            .simple-keyboard {
-                top: auto;
-                bottom: 0;
-                transition: transform 300ms ease-in-out;
-                transform: translateY(100%);
-                background: var(--primary-background-color);
-                color: var(--primary-text-color);
-            }
-            .simple-keyboard.visible {
-                transform: translateY(0);
-            }
-            .simple-keyboard.top {
-                top: 0;
-                bottom: auto;
-                transform: translateY(-100%);
-            }
-            .simple-keyboard.top.visible {
-                transform: translateY(0);
-            }
-            .simple-keyboard .hg-button {
-                background: var(--lcars-ui-quaternary);
-                color: var(--text-dark-color);
-            }
-            .hg-theme-default .hg-button.hg-standardBtn[data-skbtn="@"] {
-                max-width: 100%;
-            }
-            .simple-keyboard .hg-button.key-top {
-                background: var(--lcars-ui-tertiary);
-                color: var(--text-dark-color);
-            }
-            .simple-keyboard .hg-button.key-bottom {
-                background: var(--lcars-ui-secondary);
-                color: var(--text-dark-color);
-            }
-            .simple-keyboard .hg-button.key-hide,
-            .simple-keyboard .hg-button-at,
-            .simple-keyboard .hg-button-abc,
-            .simple-keyboard .hg-button-ABC {
-                max-width: 60px;
-            }
-            .simple-keyboard .hg-button.key-hide::before {
-                content: '';
-                display: block;
-                width: 24px;
-                height: 24px;
-                background: url('data:image/svg+xml;utf8,<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 5H20V15H4V5Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 9H8.01M12 9H12.01M16 9H16.01M8 13H8.01M12 13H12.01M16 13H16.01M12 17L12 21M12 21L15 18M12 21L9 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>') no-repeat center center;
-                background-size: contain;
-                color: var(--text-dark-color);
-            }
+            ${keyboardStyles}
         `;
         this._keyboardContainer.appendChild(style);
 
-        this.keyboard = new Keyboard(this._keyboardContainer);
+        this.keyboard = new Keyboard(keyboardInternal);
 
         this.keyboard.setOptions({
             onChange: (i : string) => this.onChange(i),
             onKeyPress: (button : string) => this.onKeyPress(button),
-            onKeyRelease: (button : string) => this.onKeyRelease(button),
             disableButtonHold: true,
             layout: {
                 'default': [
@@ -132,8 +87,8 @@ class VirtualKeyboard extends HTMLElement {
                     class: "key-hide",
                     buttons: "{hide}"
                 },
-            ],
-            debug: true
+            ]
+            //debug: true
         });
 
         // Prevent mousedown from removing focus from the input element
@@ -178,9 +133,11 @@ class VirtualKeyboard extends HTMLElement {
         const windowHeight = window.innerHeight;
 
         if (inputRect.top > windowHeight / 2) {
+            this._keyboardContainer.classList.remove("bottom");
             this._keyboardContainer.classList.add("top");
         } else {
             this._keyboardContainer.classList.remove("top");
+            this._keyboardContainer.classList.add("bottom");
         }
 
         // Make the keyboard visible
@@ -280,15 +237,19 @@ class VirtualKeyboard extends HTMLElement {
     }
 
     onKeyPress(button : string) {
-        console.log("Button pressed", button);
+        //console.log("Button pressed", button);
 
         if (button === "{ABC}" || button === "{abc}") {
             this.handleShift();
         }
-    }
 
-    onKeyRelease(button : string) {
-        console.log("Button released", button);
+        if (button === "{hide}") {
+            this.hide();
+        }
+
+        if (button === "{at}") {
+            this.keyboard.handleButtonClicked("@");
+        }
     }
 
     handleShift() {
