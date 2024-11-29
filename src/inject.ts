@@ -10,7 +10,10 @@ let globalKeyboard: VirtualKeyboard;
 class VirtualKeyboard extends HTMLElement {
     private _input: HTMLInputElement | HTMLTextAreaElement | null;
     private _keyboardContainer: HTMLElement | null;
-    private _hiding: boolean = false; // Set to true when hiding the keyboard
+    private _hasFocus: boolean = false;
+    private _side: string = "bottom";
+    private _type: string = "default";
+
     keyboard: Keyboard | null;
 
     constructor() {
@@ -24,7 +27,6 @@ class VirtualKeyboard extends HTMLElement {
         `;
         this._input = null;
         this._keyboardContainer = null;
-        this._hiding = false;
     }
 
     connectedCallback() {
@@ -64,6 +66,12 @@ class VirtualKeyboard extends HTMLElement {
                     'A S D F G H J K L : "',
                     'Z X C V B N M &lt; &gt; ?',
                     '{abc} {at} {space} {hide}'
+                ],
+                'numeric': [
+                    '1 2 3',
+                    '4 5 6',
+                    '7 8 9',
+                    '. 0 {bksp}'
                 ]
             },
             display: {
@@ -73,21 +81,7 @@ class VirtualKeyboard extends HTMLElement {
                 '{ABC}': 'ABC',
                 '{abc}': 'abc',
                 '{at}': '@'
-            },
-            buttonTheme: [
-                {
-                    class: "key-top",
-                    buttons: "` 1 2 3 4 5 6 7 8 9 0 - = ~ ! @ # $ % ^ &amp; * ( ) _ + {bksp}"
-                },
-                {
-                    class: "key-bottom",
-                    buttons: "{ABC} {abc} {at} {space} {hide}"
-                },
-                {
-                    class: "key-hide",
-                    buttons: "{hide}"
-                },
-            ]
+            }
             //debug: true
         });
 
@@ -127,36 +121,127 @@ class VirtualKeyboard extends HTMLElement {
         });
     }
 
+    private addRemoveClass(className: string, match: string) {
+        if (className === match) {
+            this._keyboardContainer.classList.add(className);
+        } else {
+            this._keyboardContainer.classList.remove(className);
+        }
+    }
+
+    private setSide(side: string) {
+        this._side = side;
+        this._keyboardContainer.classList.remove("top", "bottom", "left", "right");
+        this._keyboardContainer.classList.add(side);
+    }
+
+    private setType(type: string) {
+        this._type = type;
+        if (type === "numeric") {
+            this.keyboard.setOptions({
+                layoutName: 'numeric',
+                buttonTheme: [
+                    {
+                        class: "key-top",
+                        buttons: "1 2 3"
+                    },
+                    {
+                        class: "key-bottom",
+                        buttons: ". 0 {bksp}"
+                    },
+                ]
+            });
+        } else {
+            this.keyboard.setOptions({
+                layoutName: 'default',
+                buttonTheme: [
+                    {
+                        class: "key-top",
+                        buttons: "` 1 2 3 4 5 6 7 8 9 0 - = ~ ! @ # $ % ^ &amp; * ( ) _ + {bksp}"
+                    },
+                    {
+                        class: "key-bottom",
+                        buttons: "{ABC} {abc} {at} {space} {hide}"
+                    },
+                    {
+                        class: "key-hide",
+                        buttons: "{hide}"
+                    },
+                ]
+            });
+        }
+    }
+
+    private startShow(newSide: string, newType: string) {
+        // Temporarily disable transitions
+        this._keyboardContainer.classList.add("no-transition");
+
+        // Move the keyboard to the new position
+        this.setSide(newSide);
+        this.setType(newType);
+
+        // Force reflow to apply the new position
+        this._keyboardContainer.offsetHeight;
+
+        requestAnimationFrame(() => {
+            // Re-enable transitions
+            this._keyboardContainer.classList.remove("no-transition");
+
+            if (this._hasFocus) {
+                this._keyboardContainer.style.display = "block";
+                requestAnimationFrame(() => {
+                    this._keyboardContainer.classList.add("visible");
+                });
+            }
+        });
+    }
+
     show() {
         // Determine whether to show the keyboard above or below the input
         const inputRect = this._input.getBoundingClientRect();
         const windowHeight = window.innerHeight;
+        const windowWidth = window.innerWidth;
+        let newSide = this._side;
+        let newType = this._type;
 
-        if (inputRect.top > windowHeight / 2) {
-            this._keyboardContainer.classList.remove("bottom");
-            this._keyboardContainer.classList.add("top");
+        if (this._input.type === "number") {
+            newType = "numeric";
+            // Place on right unless the control is actually covered by the keyboard
+            newSide = (inputRect.right >= windowWidth - 250) ? "left" : "right";
         } else {
-            this._keyboardContainer.classList.remove("top");
-            this._keyboardContainer.classList.add("bottom");
+            newType = "default";
+            newSide = (inputRect.top > windowHeight / 2) ? "top" : "bottom";
         }
 
-        // Make the keyboard visible
-        this._hiding = false;
-        this._keyboardContainer.style.display = "block";
-        requestAnimationFrame(() => {
-            this._keyboardContainer.classList.add("visible");
-        });
-    }   
+        if (newSide !== this._side || newType !== this._type) {
+            // Transition to hidden first, then set the new side and type
+            this.hide();
+            this._keyboardContainer.addEventListener('transitionend', () => {
+                this.startShow(newSide, newType);
+            }, { once: true });
+        } else {
+            // Make the keyboard visible immediately
+            this.setSide(newSide);
+            this.setType(newType);
+            this._keyboardContainer.style.display = "block";
+            requestAnimationFrame(() => {
+                this._keyboardContainer.classList.add("visible");
+            });
+        }
+    }
 
     hide() {
-        this._hiding = true;
         this._keyboardContainer.classList.remove("visible");
-        setTimeout(() => {
-            if (this._hiding) {
-                this._keyboardContainer.style.display = "none";
-            }
-        }, 300); // Hide keyboard after removal with delay
+        this._keyboardContainer.addEventListener('transitionend', this.onTransitionEnd);
     }
+
+    private onTransitionEnd = () => {
+        this._keyboardContainer.removeEventListener('transitionend', this.onTransitionEnd);
+        if (!this._hasFocus) {
+            this._keyboardContainer.style.display = "none";
+        }
+    }
+
 
     private focusListener = (event: Event) => {
         console.log("Focus event", event);
@@ -166,12 +251,15 @@ class VirtualKeyboard extends HTMLElement {
             this.keyboard.setInput(this._input.value);
         }
 
+        this._hasFocus = true;
+
         this.show();
     };
 
     private blurListener = (event: Event) => {
         console.log("Blur event", event);
         if (event.target == this._input) {
+            this._hasFocus = false;
             this.hide();
         }
     };
@@ -268,8 +356,10 @@ class VirtualKeyboard extends HTMLElement {
     }
 }
 
+const supportedInputTypes : string = "textarea, input[type='text'], input[type='number'"
+
 function setupKeyboard(node : Element) {
-    const inputs = node.querySelectorAll("textarea, input[type='text']"); // TODO: Bring up number pad keyboard for type='number'
+    const inputs = node.querySelectorAll(supportedInputTypes);
     inputs.forEach(input => {
         if (input.classList.contains("keyboard-enabled")) return;
 
@@ -281,7 +371,7 @@ function setupKeyboard(node : Element) {
 
 function traverseShadowRoots(root: Element) {
     if (root.shadowRoot) {
-        const inputs = root.shadowRoot.querySelectorAll("textarea, input[type='text']");
+        const inputs = root.shadowRoot.querySelectorAll(supportedInputTypes);
         inputs.forEach(input => {
             if (input.classList.contains("keyboard-enabled")) {
                 globalKeyboard.removeInput(input as HTMLInputElement | HTMLTextAreaElement);
@@ -297,7 +387,7 @@ function traverseShadowRoots(root: Element) {
 };
 
 function removeKeyboard(node: Element) {
-    const inputs = node.querySelectorAll("textarea, input[type='text']");
+    const inputs = node.querySelectorAll(supportedInputTypes);
     inputs.forEach(input => {
         if (input.classList.contains("keyboard-enabled")) {
             globalKeyboard.removeInput(input as HTMLInputElement | HTMLTextAreaElement);

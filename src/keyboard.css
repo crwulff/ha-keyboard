@@ -1,11 +1,63 @@
-.simple-keyboard-outer {
-    top: auto;
-    bottom: 0;
+/* Position */
+.simple-keyboard-outer.top,
+.simple-keyboard-outer.bottom {
     left: 20%;
     width: 60%;
-    transition: transform 300ms ease-in-out;
-    transform: translateY(100%);
 }
+.simple-keyboard-outer.left,
+.simple-keyboard-outer.right {
+    top: 50%;
+    height: auto;
+    width: 215px;
+}
+
+.simple-keyboard-outer.top {
+    top: 0px;
+    bottom: auto;
+}
+.simple-keyboard-outer.bottom {
+    top: auto;
+    bottom: 0px;
+}
+.simple-keyboard-outer.left {
+    left: 0px;
+    right: auto;
+}
+.simple-keyboard-outer.right {
+    left: auto;
+    right: 0px;
+}
+
+.simple-keyboard-outer.top {
+    transform: translate(0,-100%);
+}
+.simple-keyboard-outer.bottom {
+    transform: translate(0,100%);
+}
+.simple-keyboard-outer.top.visible,
+.simple-keyboard-outer.bottom.visible {
+    transform: translate(0,0);
+}
+.simple-keyboard-outer.left {
+    transform: translate(-100%,-50%);
+}
+.simple-keyboard-outer.right {
+    transform: translate(100%,-50%);
+}
+.simple-keyboard-outer.left.visible,
+.simple-keyboard-outer.right.visible {
+    transform: translate(0,-50%);
+}
+
+/* Animation */
+.simple-keyboard-outer {
+    transition: transform 300ms ease-in-out;
+}
+.no-transition {
+    transition: none !important;
+}
+
+/* Theme */
 .simple-keyboard-outer.top {
     background: var(--lcars-card-bottom-color) !important;
     border-radius: 0px 0px var(--ha-card-border-radius) var(--ha-card-border-radius) !important;
@@ -29,17 +81,6 @@
 }
 .bottom .simple-keyboard {
     border-radius: var(--lcars-inner-radius) var(--lcars-inner-radius) 0px 0px;
-}
-.simple-keyboard-outer.visible {
-    transform: translateY(0);
-}
-.simple-keyboard-outer.top {
-    top: 0;
-    bottom: auto;
-    transform: translateY(-100%);
-}
-.simple-keyboard-outer.top.visible {
-    transform: translateY(0);
 }
 .simple-keyboard .hg-button {
     background: var(--lcars-ui-quaternary);
