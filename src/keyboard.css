@@ -72,30 +72,75 @@
     border-right: var(--lcars-vertical-border) solid var(--lcars-card-top-color);
     border-top: var(--lcars-horizontal-border) solid var(--lcars-card-top-color);
 }
+.simple-keyboard-outer.left,
+.simple-keyboard-outer.right {
+    border-top: var(--lcars-horizontal-border) solid var(--lcars-card-top-color);
+    border-bottom: var(--lcars-horizontal-border) solid var(--lcars-card-bottom-color);
+    border-style: solid;
+    border-color: transparent;
+    background-image: linear-gradient(to bottom,
+        var(--lcars-card-top-color) 26%,
+        black 26%, black 28%,
+        var(--lcars-card-mid-left-color) 28%,
+        var(--lcars-card-mid-left-color) 72%,
+        black 72%, black 74%,
+        var(--lcars-card-bottom-color) 74%);
+    background-size: cover;
+    background-repeat: no-repeat;
+    background-clip: border-box;
+    background-origin: border-box;
+}
+.simple-keyboard-outer.left {
+    border-top-right-radius: var(--ha-card-border-radius) !important;
+    border-bottom-right-radius: var(--ha-card-border-radius) !important;
+    border-left-width: 0px;
+    border-right-width: var(--lcars-vertical-border);
+}
+.simple-keyboard-outer.right {
+    border-top-left-radius: var(--ha-card-border-radius) !important;
+    border-bottom-left-radius: var(--ha-card-border-radius) !important;
+    border-left-width: var(--lcars-vertical-border);
+    border-right-width: 0px;
+}
 .simple-keyboard {
     background: var(--primary-background-color);
     color: var(--primary-text-color);
+    border-radius: 0px;
 }
 .top .simple-keyboard {
-    border-radius: 0px 0px var(--lcars-inner-radius) var(--lcars-inner-radius);
+    border-bottom-left-radius: var(--lcars-inner-radius);
+    border-bottom-right-radius: var(--lcars-inner-radius);
 }
 .bottom .simple-keyboard {
-    border-radius: var(--lcars-inner-radius) var(--lcars-inner-radius) 0px 0px;
+    border-top-left-radius: var(--lcars-inner-radius);
+    border-top-right-radius: var(--lcars-inner-radius);
+}
+.left .simple-keyboard {
+    border-top-right-radius: var(--lcars-inner-radius);
+    border-bottom-right-radius: var(--lcars-inner-radius);
+}
+.right .simple-keyboard {
+    border-top-left-radius: var(--lcars-inner-radius);
+    border-bottom-left-radius: var(--lcars-inner-radius);
 }
 .simple-keyboard .hg-button {
     background: var(--lcars-ui-quaternary);
     color: var(--text-dark-color);
 }
+.left .hg-theme-default .hg-row:first-child > div:last-child,
 .bottom .hg-theme-default .hg-row:first-child > div:last-child {
     border-top-right-radius: 14px;
 }
-.bottom .hg-theme-default .hg-row:first-child>div:first-child {
+.right .hg-theme-default .hg-row:first-child > div:first-child,
+.bottom .hg-theme-default .hg-row:first-child > div:first-child {
     border-top-left-radius: 14px;
 }
-.top .hg-theme-default .hg-row:last-child>div:last-child {
+.left .hg-theme-default .hg-row:last-child > div:last-child,
+.top .hg-theme-default .hg-row:last-child > div:last-child {
     border-bottom-right-radius: 14px;
 }
-.top .hg-theme-default .hg-row:last-child>div:first-child {
+.right .hg-theme-default .hg-row:last-child > div:first-child,
+.top .hg-theme-default .hg-row:last-child > div:first-child {
     border-bottom-left-radius: 14px;
 }
 .hg-theme-default .hg-button.hg-standardBtn[data-skbtn="@"] {
@@ -120,7 +165,7 @@
     display: block;
     width: 24px;
     height: 24px;
-    background: url('data:image/svg+xml;utf8,<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 5H20V15H4V5Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 9H8.01M12 9H12.01M16 9H16.01M8 13H8.01M12 13H12.01M16 13H16.01M12 17L12 21M12 21L15 18M12 21L9 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>') no-repeat center center;
+    background: url('data:image/svg+xml;utf8,<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 5H20V15H4V5Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 8H8.01M12 8H12.01M16 8H16.01M8 12H8M12 12H12.01M16 12H16.01M12 21M12 21L15 18M12 21L9 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>') no-repeat center center;
     background-size: contain;
     color: var(--text-dark-color);
 }
