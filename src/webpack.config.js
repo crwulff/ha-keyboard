@@ -11,10 +11,10 @@ const banner = `
 
 module.exports = {
   mode: "production",
-  entry: './inject.ts',
+  entry: './keyboard.ts',
   target: 'es6',
   output: {
-    filename: 'inject.js',
+    filename: 'keyboard.js',
     path: path.resolve(__dirname, 'build'),
     chunkFormat: 'array-push',
   },

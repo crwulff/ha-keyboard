@@ -16,6 +16,6 @@
   },
   "include": [
     "./global.d.ts",
-    "./inject.ts"
+    "./keyboard.ts"
   ]
 }
