@@ -1,6 +1,6 @@
 import { customElement } from 'lit/decorators.js';
 import Keyboard from 'simple-keyboard';
-import styles from './simple-keyboard/build/css/index.css';
+import styles from './node_modules/simple-keyboard/build/css/index.css';
 import keyboardStyles from './keyboard.css';
 
 // Global keyboard instance
