@@ -5,5 +5,5 @@
   "documentation": "https://github.com/crwulff/ha-keyboard",
   "dependencies": [],
   "codeowners": ["@crwulff"],
-  "requirements": [],
+  "requirements": []
 }
