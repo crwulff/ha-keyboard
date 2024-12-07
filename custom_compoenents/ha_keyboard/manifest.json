@@ -1,0 +1,9 @@
+{
+  "domain": "ha_keyboard",
+  "name": "HomeAssistant Virtual Keyboard",
+  "version": "1.0.0",
+  "documentation": "https://github.com/crwulff/ha-keyboard",
+  "dependencies": [],
+  "codeowners": ["@crwulff"],
+  "requirements": [],
+}

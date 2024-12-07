@@ -1,5 +1,6 @@
 {
     "name": "HomeAssistant Virtual Keyboard",
     "render_readme": true,
-    "filename": "keyboard.js"
+    "filename": "keyboard.js",
+    "manifest": "custom_components/ha_keyboard/manifest.json"
 }
