@@ -11,11 +11,11 @@ const banner = `
 
 module.exports = {
   mode: "production",
-  entry: './keyboard.ts',
+  entry: './src/keyboard.ts',
   target: 'es6',
   output: {
     filename: 'keyboard.js',
-    path: path.resolve(__dirname, 'build'),
+    path: path.resolve(__dirname, 'dist'),
     chunkFormat: 'array-push',
   },
   optimization: {
