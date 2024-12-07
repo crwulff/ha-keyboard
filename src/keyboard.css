@@ -51,7 +51,7 @@
 
 /* Animation */
 .simple-keyboard-outer {
-    transition: transform 300ms ease-in-out;
+    transition: transform 200ms ease-in-out;
 }
 .no-transition {
     transition: none !important;

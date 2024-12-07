@@ -11,8 +11,24 @@ class VirtualKeyboard extends HTMLElement {
     private _input: HTMLInputElement | HTMLTextAreaElement | null;
     private _keyboardContainer: HTMLElement | null;
     private _hasFocus: boolean = false;
-    private _side: string = "bottom";
-    private _type: string = "default";
+    private _currentSide: string = "none";
+    private _currentType: string = "none";
+    private _targetSide: string = "bottom";
+    private _targetType: string = "default";
+
+   /**
+    * State machine for the keyboard visibility.
+    *
+    * digraph StateMachine {
+    *   hidden -> moving;
+    *   moving -> hidden;
+    *   hidden -> showing;
+    *   showing -> visible;
+    *   visible -> hiding;
+    *   hiding -> hidden;
+    * }
+    */
+    private _state: 'moving' | 'hidden' | 'hiding' | 'showing' | 'visible' = 'hidden';
 
     keyboard: Keyboard | null;
 
@@ -97,6 +113,9 @@ class VirtualKeyboard extends HTMLElement {
             e.preventDefault();
         });
 
+        // Add event listeners for transitionstart and transitionend
+        this._keyboardContainer.addEventListener('transitionend', this.onTransitionEnd);
+
         // ha-dialog will try to make evertyhing else inert when it is open
         // but we want the keyboard to be active
 
@@ -121,22 +140,64 @@ class VirtualKeyboard extends HTMLElement {
         });
     }
 
-    private addRemoveClass(className: string, match: string) {
-        if (className === match) {
-            this._keyboardContainer.classList.add(className);
-        } else {
-            this._keyboardContainer.classList.remove(className);
+    private handleEvent(event: string) {
+        console.log("Handling event", event, "in state", this._state);
+        switch (event) {
+            case 'transitionend':
+                if (this._state === 'moving') {
+                    this._state = 'hidden';
+                } else if (this._state === 'hiding') {
+                    this._state = 'hidden';
+                } else if (this._state === 'showing') {
+                    this._state = 'visible';
+                }
+                break;
+            case 'postypechange':
+            case 'hide':
+                /* Nothing to do. State handling below will take care of the rest */
+                break;
+        }
+
+        switch (this._state) {
+            case 'visible':
+                /* If we are on the wrong side or type, start by hiding the keyboard.
+                 * If we no longer have focus, start hiding the keyboard.
+                 */
+                if (this._targetSide !== this._currentSide ||
+                    this._targetType !== this._currentType ||
+                    !this._hasFocus) {
+
+                    this._state = 'hiding';
+                    this.startHiding();
+                }
+                break;
+            case 'hidden':
+                /* If we are on the wrong side or type, start moving the keyboard */
+                if (this._targetSide !== this._currentSide ||
+                    this._targetType !== this._currentType) {
+
+                    this._state = 'moving';
+                    this.startMove(this._targetSide, this._targetType);
+                }
+                /* We are the correct side and type, but we are still hidden.
+                 * Start showing the keyboard
+                 */
+                else if (this._hasFocus) {
+                    this._state = 'showing';
+                    this.startShowing();
+                }
+                break;
         }
     }
 
     private setSide(side: string) {
-        this._side = side;
+        this._currentSide = side;
         this._keyboardContainer.classList.remove("top", "bottom", "left", "right");
         this._keyboardContainer.classList.add(side);
     }
 
     private setType(type: string) {
-        this._type = type;
+        this._currentType = type;
         if (type === "numeric") {
             this.keyboard.setOptions({
                 layoutName: 'numeric',
@@ -172,7 +233,8 @@ class VirtualKeyboard extends HTMLElement {
         }
     }
 
-    private startShow(newSide: string, newType: string) {
+    private startMove(newSide: string, newType: string) {
+        console.log("Moving keyboard to", newSide, newType);
         // Temporarily disable transitions
         this._keyboardContainer.classList.add("no-transition");
 
@@ -184,15 +246,29 @@ class VirtualKeyboard extends HTMLElement {
         this._keyboardContainer.offsetHeight;
 
         requestAnimationFrame(() => {
+            console.log("Transitioning keyboard to", newSide, newType);
             // Re-enable transitions
             this._keyboardContainer.classList.remove("no-transition");
 
-            if (this._hasFocus) {
-                this._keyboardContainer.style.display = "block";
-                requestAnimationFrame(() => {
-                    this._keyboardContainer.classList.add("visible");
-                });
-            }
+            // The animation frame is immediately complete
+            this.handleEvent('transitionend');
+        });
+    }
+
+    private startShowing() {
+        console.log("Showing keyboard");
+        this._keyboardContainer.style.display = "block";
+        requestAnimationFrame(() => {
+            console.log("Starting transition to visible");
+            this._keyboardContainer.classList.add("visible");
+        });
+    }
+
+    private startHiding() {
+        console.log("Hiding keyboard");
+        requestAnimationFrame(() => {
+            console.log("Starting transition to hidden");
+            this._keyboardContainer.classList.remove("visible");
         });
     }
 
@@ -201,8 +277,8 @@ class VirtualKeyboard extends HTMLElement {
         const inputRect = this._input.getBoundingClientRect();
         const windowHeight = window.innerHeight;
         const windowWidth = window.innerWidth;
-        let newSide = this._side;
-        let newType = this._type;
+        let newSide = this._currentSide;
+        let newType = this._currentType;
 
         if (this._input.type === "number") {
             newType = "numeric";
@@ -213,35 +289,18 @@ class VirtualKeyboard extends HTMLElement {
             newSide = (inputRect.top > windowHeight / 2) ? "top" : "bottom";
         }
 
-        if (newSide !== this._side || newType !== this._type) {
-            // Transition to hidden first, then set the new side and type
-            this.hide();
-            this._keyboardContainer.addEventListener('transitionend', () => {
-                this.startShow(newSide, newType);
-            }, { once: true });
-        } else {
-            // Make the keyboard visible immediately
-            this.setSide(newSide);
-            this.setType(newType);
-            this._keyboardContainer.style.display = "block";
-            requestAnimationFrame(() => {
-                this._keyboardContainer.classList.add("visible");
-            });
-        }
+        this._targetSide = newSide;
+        this._targetType = newType;
+        setTimeout(() => {
+            this.handleEvent('postypechange');
+        }, 50);
     }
 
     hide() {
-        this._keyboardContainer.classList.remove("visible");
-        this._keyboardContainer.addEventListener('transitionend', this.onTransitionEnd);
+        setTimeout(() => {
+            this.handleEvent('hide');
+        }, 50);
     }
-
-    private onTransitionEnd = () => {
-        this._keyboardContainer.removeEventListener('transitionend', this.onTransitionEnd);
-        if (!this._hasFocus) {
-            this._keyboardContainer.style.display = "none";
-        }
-    }
-
 
     private focusListener = (event: Event) => {
         console.log("Focus event", event);
@@ -332,6 +391,7 @@ class VirtualKeyboard extends HTMLElement {
         }
 
         if (button === "{hide}") {
+            this._hasFocus = false;
             this.hide();
         }
 
@@ -339,6 +399,11 @@ class VirtualKeyboard extends HTMLElement {
             this.keyboard.handleButtonClicked("@");
         }
     }
+
+    private onTransitionEnd = () => {
+        console.log('Transition ended');
+        this.handleEvent('transitionend');
+    };
 
     handleShift() {
         if (!this.keyboard) {
